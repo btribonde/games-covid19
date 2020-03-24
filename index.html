@@ -1,0 +1,209 @@
+<html>
+
+<head>
+    <script src="https://pixijs.download/release/pixi.min.js"></script>
+</head>
+
+<body>
+    <script>
+        var app = new PIXI.Application({ width: 1800, height: 900 });
+        document.body.appendChild(app.view);
+
+        var balle = new PIXI.Graphics();
+        balle.beginFill(0xffffff);
+        balle.drawCircle(0, 0, 10);
+		
+        var raquette_1 = new PIXI.Graphics();
+        raquette_1.beginFill(0xffaaaa);
+        raquette_1.drawRect(0, 0, 10, 100);
+		raquette_1.x = 5;
+		raquette_1.vy = 0;
+		raquette_1.score = 0;
+		
+        var raquette_2 = new PIXI.Graphics();
+        raquette_2.beginFill(0xaaaaff);
+        raquette_2.drawRect(0, 0, 10, 100);
+		raquette_2.x = app.screen.width-15;
+		raquette_2.vy = 0;
+		raquette_2.score = 0;
+		
+		function degrees_to_radians(degrees)
+		{
+			var pi = Math.PI;
+			return degrees * (pi/180);
+		}
+		
+		let text = new PIXI.Text('0 - 0', {fontFamily : 'Arial', fontSize: 50, fill : 0xff1010, align : 'center'});
+		text.x = app.screen.width / 2 - 100;
+		
+		bounce_lift = 0;
+		start_player_1 = true;
+		
+		function init_game() {
+			balle.x = (app.screen.width - balle.width) / 2;
+			balle.y = (app.screen.height - balle.width) / 2;
+			raquette_1.y = (app.screen.height-raquette_1.height) / 2;
+			raquette_2.y = (app.screen.height-raquette_2.height) / 2;
+			if(start_player_1) {
+				balle.angle = 0.0
+			} else {
+				balle.angle = 180.0
+			}
+			balle.velocity = 15.0
+			text.text = raquette_1.score+' - '+raquette_2.score;
+			bounce_lift = 0;
+			
+			raquette_1.height = 100 + (raquette_2.score - raquette_1.score) * 2;
+			raquette_2.height = 100 + (raquette_1.score - raquette_2.score) * 2;
+		}
+
+        app.stage.addChild(balle);
+        app.stage.addChild(raquette_1);
+        app.stage.addChild(raquette_2);
+		app.stage.addChild(text);
+		
+		init_game();
+
+        app.ticker.add((time) => {
+			if(raquette_1.y > 0 && raquette_1.vy < 0) {
+				raquette_1.y = raquette_1.y + raquette_1.vy;
+			}
+			
+			if(raquette_1.y < (app.screen.height - raquette_1.height) && raquette_1.vy > 0) {
+				raquette_1.y = raquette_1.y + raquette_1.vy;
+			}
+			
+			if(raquette_2.y > 0 && raquette_2.vy < 0) {
+				raquette_2.y = raquette_2.y + raquette_2.vy;
+			}
+			
+			if(raquette_2.y < (app.screen.height - raquette_2.height) && raquette_2.vy > 0) {
+				raquette_2.y = raquette_2.y + raquette_2.vy;
+			}
+			
+			balle.angle = balle.angle + bounce_lift;
+			balle.x = balle.x + Math.cos(degrees_to_radians(balle.angle)) * balle.velocity
+			balle.y = balle.y + Math.sin(degrees_to_radians(balle.angle)) * balle.velocity
+			
+			if (balle.y > (app.screen.height - balle.height / 2)) {
+				balle.angle = 360 - balle.angle;
+			}
+			
+			if (balle.y < balle.height / 2) {
+				balle.angle = 360 - balle.angle;
+			}
+			
+			bounce_racket = false;
+			bounce_angle = 0;
+			
+			if(balle.y > raquette_1.y - (balle.height / 2) && balle.y < raquette_1.y + raquette_1.height + (balle.height / 2) && balle.x - balle.height / 2 <= raquette_1.x + raquette_1.width) {
+			   bounce_racket = true;
+			   bounce_angle = (((balle.y + balle.height / 2) - (raquette_1.y + raquette_1.height / 2)) / (raquette_1.height / 2)) * 45;
+			   bounce_lift = raquette_1.vy/10;
+			}
+			   
+			if(balle.y > raquette_2.y - (balle.height / 2) && balle.y < raquette_2.y + raquette_2.height + (balle.height / 2) && balle.x >= raquette_2.x - balle.height / 2) {
+			   bounce_racket = true;
+			   bounce_angle = -(((balle.y + balle.height / 2) - (raquette_2.y + raquette_2.height / 2)) / (raquette_2.height / 2)) * 45;
+			   bounce_lift = -raquette_2.vy/10;
+			} 
+			
+			if(bounce_racket) {
+				balle.angle = ((360 - balle.angle + bounce_angle) + 180) % 360;
+			}
+			
+			if(balle.x <= 0) {
+				raquette_2.score = raquette_2.score + 1;
+				start_player_1 = false;
+				init_game();
+			}
+			if(balle.x >= app.screen.width + balle.height) {
+				raquette_1.score = raquette_1.score + 1;
+				start_player_1 = true;
+				init_game();
+			}
+
+        });
+		
+		function keyboard(value) {
+		  let key = {};
+		  key.value = value;
+		  key.isDown = false;
+		  key.isUp = true;
+		  key.press = undefined;
+		  key.release = undefined;
+		  //The `downHandler`
+		  key.downHandler = event => {
+			if (event.key === key.value) {
+			  if (key.isUp && key.press) key.press();
+			  key.isDown = true;
+			  key.isUp = false;
+			  event.preventDefault();
+			}
+		  };
+
+		  //The `upHandler`
+		  key.upHandler = event => {
+			if (event.key === key.value) {
+			  if (key.isDown && key.release) key.release();
+			  key.isDown = false;
+			  key.isUp = true;
+			  event.preventDefault();
+			}
+		  };
+
+		  //Attach event listeners
+		  const downListener = key.downHandler.bind(key);
+		  const upListener = key.upHandler.bind(key);
+		  
+		  window.addEventListener(
+			"keydown", downListener, false
+		  );
+		  window.addEventListener(
+			"keyup", upListener, false
+		  );
+		  
+		  // Detach event listeners
+		  key.unsubscribe = () => {
+			window.removeEventListener("keydown", downListener);
+			window.removeEventListener("keyup", upListener);
+		  };
+		  
+		  return key;
+		}
+		
+		let keyDown1 = keyboard("w");
+		let keyUp1 = keyboard("q");
+		
+		keyDown1.press = () => {
+		  raquette_1.vy = 10
+		};
+		keyDown1.release = () => {
+		  raquette_1.vy = 0
+		};
+		keyUp1.press = () => {
+		  raquette_1.vy = -10
+		};
+		keyUp1.release = () => {
+		  raquette_1.vy = 0
+		};
+		
+		let keyDown2 = keyboard("ArrowDown");
+		let keyUp2 = keyboard("ArrowUp");
+		
+		keyDown2.press = () => {
+		  raquette_2.vy = 10
+		};
+		keyDown2.release = () => {
+		  raquette_2.vy = 0
+		};
+		keyUp2.press = () => {
+		  raquette_2.vy = -10
+		};
+		keyUp2.release = () => {
+		  raquette_2.vy = 0
+		};
+    </script>
+</body>
+
+</html>
